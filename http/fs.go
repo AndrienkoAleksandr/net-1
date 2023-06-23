@@ -9,7 +9,7 @@ package http
 import (
 	"errors"
 	"fmt"
-	"internal/safefilepath"
+	"github.com/AndrienkoAleksandr/net-1/internal/safefilepath"
 	"io"
 	"io/fs"
 	"mime"
