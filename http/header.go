@@ -6,13 +6,14 @@ package http
 
 import (
 	"io"
-	"net/http/httptrace"
-	"net/http/internal/ascii"
 	"net/textproto"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/AndrienkoAleksandr/net-1/http/httptrace"
+	"github.com/AndrienkoAleksandr/net-1/http/internal/ascii"
 
 	"golang.org/x/net/http/httpguts"
 )

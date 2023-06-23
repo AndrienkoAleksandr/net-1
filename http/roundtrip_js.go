@@ -227,13 +227,13 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 		case clHeader != "":
 			cl, err := strconv.ParseInt(clHeader, 10, 64)
 			if err != nil {
-				errCh <- fmt.Errorf("net/http: ill-formed Content-Length header: %v", err)
+				errCh <- fmt.Errorf("github.com/AndrienkoAleksandr/net-1/http: ill-formed Content-Length header: %v", err)
 				return nil
 			}
 			if cl < 0 {
 				// Content-Length values less than 0 are invalid.
 				// See: https://datatracker.ietf.org/doc/html/rfc2616/#section-14.13
-				errCh <- fmt.Errorf("net/http: invalid Content-Length header: %q", clHeader)
+				errCh <- fmt.Errorf("github.com/AndrienkoAleksandr/net-1/http: invalid Content-Length header: %q", clHeader)
 				return nil
 			}
 			contentLength = cl
@@ -285,7 +285,7 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 				errMsg += ": " + cause.String()
 			}
 		}
-		errCh <- fmt.Errorf("net/http: fetch() failed: %s", errMsg)
+		errCh <- fmt.Errorf("github.com/AndrienkoAleksandr/net-1/http: fetch() failed: %s", errMsg)
 		return nil
 	})
 
@@ -304,7 +304,7 @@ func (t *Transport) RoundTrip(req *Request) (*Response, error) {
 	}
 }
 
-var errClosed = errors.New("net/http: reader is closed")
+var errClosed = errors.New("github.com/AndrienkoAleksandr/net-1/http: reader is closed")
 
 // streamReader implements an io.ReadCloser wrapper for ReadableStream.
 // See https://fetch.spec.whatwg.org/#readablestream for more information.

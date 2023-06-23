@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http/internal/ascii"
 	"net/url"
 	"reflect"
 	"sort"
@@ -25,6 +24,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/AndrienkoAleksandr/net-1/http/internal/ascii"
 )
 
 // A Client is an HTTP client. Its zero value (DefaultClient) is a
@@ -494,7 +495,7 @@ func alwaysFalse() bool { return false }
 // control how redirects are processed. If returned, the next request
 // is not sent and the most recent response is returned with its body
 // unclosed.
-var ErrUseLastResponse = errors.New("net/http: use last response")
+var ErrUseLastResponse = errors.New("github.com/AndrienkoAleksandr/net-1/http: use last response")
 
 // checkRedirect calls either the user's configured CheckRedirect
 // function, or the default.

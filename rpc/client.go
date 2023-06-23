@@ -11,8 +11,9 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/http"
 	"sync"
+
+	"github.com/AndrienkoAleksandr/net-1/http"
 )
 
 // ServerError represents an error that has been returned from

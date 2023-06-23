@@ -134,10 +134,11 @@ import (
 	"io"
 	"log"
 	"net"
-	"net/http"
 	"reflect"
 	"strings"
 	"sync"
+
+	"github.com/AndrienkoAleksandr/net-1/http"
 )
 
 const (
