@@ -17,7 +17,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"internal/godebug"
+	"github.com/AndrienkoAleksandr/net-1/internal/godebug"
 	"io"
 	"log"
 	"net"
