@@ -30,7 +30,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/net/http/httpguts"
+	"github.com/AndrienkoAleksandr/net/http/httpguts"
 )
 
 // Errors used by the HTTP server.

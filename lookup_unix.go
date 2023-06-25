@@ -12,7 +12,7 @@ import (
 	"sync"
 	"syscall"
 
-	"golang.org/x/net/dns/dnsmessage"
+	"github.com/AndrienkoAleksandr/net/dns/dnsmessage"
 )
 
 var onceReadProtocols sync.Once

@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/dns/dnsmessage"
+	"github.com/AndrienkoAleksandr/net/dns/dnsmessage"
 )
 
 const (

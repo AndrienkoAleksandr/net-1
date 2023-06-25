@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/http/httpguts"
+	"github.com/AndrienkoAleksandr/net/http/httpguts"
 )
 
 // ReverseProxy is an HTTP Handler that takes an incoming request and

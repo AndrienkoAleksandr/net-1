@@ -9,7 +9,7 @@ import (
 	"github.com/AndrienkoAleksandr/net-1/internal/itoa"
 	"sort"
 
-	"golang.org/x/net/dns/dnsmessage"
+	"github.com/AndrienkoAleksandr/net/dns/dnsmessage"
 )
 
 // provided by runtime

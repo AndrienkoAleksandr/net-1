@@ -9,7 +9,7 @@ package net
 import (
 	"syscall"
 
-	"golang.org/x/net/route"
+	"github.com/AndrienkoAleksandr/net/route"
 )
 
 // If the ifindex is zero, interfaceTable returns mappings of all

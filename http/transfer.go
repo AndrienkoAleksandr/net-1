@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/http/httpguts"
+	"github.com/AndrienkoAleksandr/net/http/httpguts"
 )
 
 // ErrLineTooLong is returned when reading request or response bodies

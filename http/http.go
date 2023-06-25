@@ -13,7 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"golang.org/x/net/http/httpguts"
+	"github.com/AndrienkoAleksandr/net/http/httpguts"
 )
 
 // incomparable is a zero-width, non-comparable type. Adding it to a struct
