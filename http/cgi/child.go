@@ -14,12 +14,11 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"github.com/AndrienkoAleksandr/net-1/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/AndrienkoAleksandr/net-1/http"
 )
 
 // Request returns the HTTP request as represented in the current
@@ -83,12 +82,10 @@ func RequestFromMap(params map[string]string) (*http.Request, error) {
 
 	// Copy "HTTP_FOO_BAR" variables to "Foo-Bar" Headers
 	for k, v := range params {
-		if k == "HTTP_HOST" {
+		if !strings.HasPrefix(k, "HTTP_") || k == "HTTP_HOST" {
 			continue
 		}
-		if after, found := strings.CutPrefix(k, "HTTP_"); found {
-			r.Header.Add(strings.ReplaceAll(after, "_", "-"), v)
-		}
+		r.Header.Add(strings.ReplaceAll(k[5:], "_", "-"), v)
 	}
 
 	uriStr := params["REQUEST_URI"]

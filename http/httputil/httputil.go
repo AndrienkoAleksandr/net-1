@@ -8,7 +8,6 @@ package httputil
 
 import (
 	"io"
-
 	"github.com/AndrienkoAleksandr/net-1/http/internal"
 )
 

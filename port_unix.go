@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build unix || (js && wasm) || wasip1
+//go:build aix || darwin || dragonfly || freebsd || (js && wasm) || linux || netbsd || openbsd || solaris
 
 // Read system port mappings from /etc/services
 
 package net
 
 import (
-	"internal/bytealg"
+	"github.com/AndrienkoAleksandr/net-1/internal/bytealg"
 	"sync"
 )
 

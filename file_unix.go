@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build unix
+//go:build aix || darwin || dragonfly || freebsd || linux || netbsd || openbsd || solaris
 
 package net
 
 import (
-	"internal/poll"
+	"github.com/AndrienkoAleksandr/net-1/internal/poll"
 	"os"
 	"syscall"
 )
@@ -74,7 +74,7 @@ func fileConn(f *os.File) (Conn, error) {
 	}
 	switch fd.laddr.(type) {
 	case *TCPAddr:
-		return newTCPConn(fd, defaultTCPKeepAlive, testHookSetKeepAlive), nil
+		return newTCPConn(fd), nil
 	case *UDPAddr:
 		return newUDPConn(fd), nil
 	case *IPAddr:

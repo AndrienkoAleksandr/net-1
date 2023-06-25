@@ -12,9 +12,8 @@ package rpc
 import (
 	"fmt"
 	"html/template"
-	"sort"
-
 	"github.com/AndrienkoAleksandr/net-1/http"
+	"sort"
 )
 
 const debugText = `<html>

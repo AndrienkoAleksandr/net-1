@@ -6,7 +6,7 @@ package net
 
 import (
 	"errors"
-	"internal/itoa"
+	"github.com/AndrienkoAleksandr/net-1/internal/itoa"
 	"os"
 )
 
@@ -95,9 +95,9 @@ func readInterface(i int) (*Interface, error) {
 			}
 		}
 
-		ifc.Flags = FlagUp | FlagRunning | FlagBroadcast | FlagMulticast
+		ifc.Flags = FlagUp | FlagBroadcast | FlagMulticast
 	} else {
-		ifc.Flags = FlagUp | FlagRunning | FlagMulticast | FlagLoopback
+		ifc.Flags = FlagUp | FlagMulticast | FlagLoopback
 	}
 
 	return ifc, nil

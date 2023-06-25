@@ -6,7 +6,7 @@ package net
 
 import (
 	"context"
-	"internal/itoa"
+	"github.com/AndrienkoAleksandr/net-1/internal/itoa"
 	"net/netip"
 	"syscall"
 )
@@ -164,10 +164,6 @@ func (c *UDPConn) ReadFrom(b []byte) (int, Addr, error) {
 }
 
 // ReadFromUDPAddrPort acts like ReadFrom but returns a netip.AddrPort.
-//
-// If c is bound to an unspecified address, the returned
-// netip.AddrPort's address might be an IPv4-mapped IPv6 address.
-// Use netip.Addr.Unmap to get the address without the IPv6 prefix.
 func (c *UDPConn) ReadFromUDPAddrPort(b []byte) (n int, addr netip.AddrPort, err error) {
 	if !c.ok() {
 		return 0, netip.AddrPort{}, syscall.EINVAL

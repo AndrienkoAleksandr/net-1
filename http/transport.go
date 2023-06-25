@@ -21,6 +21,8 @@ import (
 	"io"
 	"log"
 	"net"
+	"github.com/AndrienkoAleksandr/net-1/http/httptrace"
+	"github.com/AndrienkoAleksandr/net-1/http/internal/ascii"
 	"net/textproto"
 	"net/url"
 	"reflect"
@@ -29,9 +31,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AndrienkoAleksandr/net-1/http/httptrace"
-	"github.com/AndrienkoAleksandr/net-1/http/internal/ascii"
-
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/http/httpproxy"
 )
@@ -39,8 +38,8 @@ import (
 // DefaultTransport is the default implementation of Transport and is
 // used by DefaultClient. It establishes network connections as needed
 // and caches them for reuse by subsequent calls. It uses HTTP proxies
-// as directed by the environment variables HTTP_PROXY, HTTPS_PROXY
-// and NO_PROXY (or the lowercase versions thereof).
+// as directed by the $HTTP_PROXY and $NO_PROXY (or $http_proxy and
+// $no_proxy) environment variables.
 var DefaultTransport RoundTripper = &Transport{
 	Proxy: ProxyFromEnvironment,
 	DialContext: defaultTransportDialContext(&net.Dialer{
@@ -86,13 +85,13 @@ const DefaultMaxIdleConnsPerHost = 2
 // ClientTrace.Got1xxResponse.
 //
 // Transport only retries a request upon encountering a network error
-// if the connection has been already been used successfully and if the
-// request is idempotent and either has no body or has its Request.GetBody
-// defined. HTTP requests are considered idempotent if they have HTTP methods
-// GET, HEAD, OPTIONS, or TRACE; or if their Header map contains an
-// "Idempotency-Key" or "X-Idempotency-Key" entry. If the idempotency key
-// value is a zero-length slice, the request is treated as idempotent but the
-// header is not sent on the wire.
+// if the request is idempotent and either has no body or has its
+// Request.GetBody defined. HTTP requests are considered idempotent if
+// they have HTTP methods GET, HEAD, OPTIONS, or TRACE; or if their
+// Header map contains an "Idempotency-Key" or "X-Idempotency-Key"
+// entry. If the idempotency key value is a zero-length slice, the
+// request is treated as idempotent but the header is not sent on the
+// wire.
 type Transport struct {
 	idleMu       sync.Mutex
 	closeIdle    bool                                // user has requested to close all idle conns
@@ -120,11 +119,6 @@ type Transport struct {
 	//
 	// If Proxy is nil or returns a nil *URL, no proxy is used.
 	Proxy func(*Request) (*url.URL, error)
-
-	// OnProxyConnectResponse is called when the Transport gets an HTTP response from
-	// a proxy for a CONNECT request. It's called before the check for a 200 OK response.
-	// If it returns an error, the request fails with that error.
-	OnProxyConnectResponse func(ctx context.Context, proxyURL *url.URL, connectReq *Request, connectRes *Response) error
 
 	// DialContext specifies the dial function for creating unencrypted TCP connections.
 	// If DialContext is nil (and the deprecated Dial below is also nil),
@@ -174,7 +168,7 @@ type Transport struct {
 	// If non-nil, HTTP/2 support may not be enabled by default.
 	TLSClientConfig *tls.Config
 
-	// TLSHandshakeTimeout specifies the maximum amount of time to
+	// TLSHandshakeTimeout specifies the maximum amount of time waiting to
 	// wait for a TLS handshake. Zero means no timeout.
 	TLSHandshakeTimeout time.Duration
 
@@ -315,7 +309,6 @@ func (t *Transport) Clone() *Transport {
 	t.nextProtoOnce.Do(t.onceSetNextProtoDefaults)
 	t2 := &Transport{
 		Proxy:                  t.Proxy,
-		OnProxyConnectResponse: t.OnProxyConnectResponse,
 		DialContext:            t.DialContext,
 		Dial:                   t.Dial,
 		DialTLS:                t.DialTLS,
@@ -363,14 +356,11 @@ func (t *Transport) hasCustomTLSDialer() bool {
 	return t.DialTLS != nil || t.DialTLSContext != nil
 }
 
-var http2client = godebug.New("http2client")
-
 // onceSetNextProtoDefaults initializes TLSNextProto.
 // It must be called via t.nextProtoOnce.Do.
 func (t *Transport) onceSetNextProtoDefaults() {
 	t.tlsNextProtoWasNil = (t.TLSNextProto == nil)
-	if http2client.Value() == "0" {
-		http2client.IncNonDefault()
+	if godebug.Get("http2client") == "0" {
 		return
 	}
 
@@ -432,8 +422,8 @@ func (t *Transport) onceSetNextProtoDefaults() {
 // ProxyFromEnvironment returns the URL of the proxy to use for a
 // given request, as indicated by the environment variables
 // HTTP_PROXY, HTTPS_PROXY and NO_PROXY (or the lowercase versions
-// thereof). Requests use the proxy from the environment variable
-// matching their scheme, unless excluded by NO_PROXY.
+// thereof). HTTPS_PROXY takes precedence over HTTP_PROXY for https
+// requests.
 //
 // The environment values may be either a complete URL or a
 // "host[:port]", in which case the "http" scheme is assumed.
@@ -530,13 +520,12 @@ func (t *Transport) roundTrip(req *Request) (*Response, error) {
 		for k, vv := range req.Header {
 			if !httpguts.ValidHeaderFieldName(k) {
 				req.closeBody()
-				return nil, fmt.Errorf("github.com/AndrienkoAleksandr/net-1/http: invalid header field name %q", k)
+				return nil, fmt.Errorf("net/http: invalid header field name %q", k)
 			}
 			for _, v := range vv {
 				if !httpguts.ValidHeaderFieldValue(v) {
 					req.closeBody()
-					// Don't include the value in the error, because it may be sensitive.
-					return nil, fmt.Errorf("github.com/AndrienkoAleksandr/net-1/http: invalid header field value for %q", k)
+					return nil, fmt.Errorf("net/http: invalid header field value %q for key %v", v, k)
 				}
 			}
 		}
@@ -562,7 +551,7 @@ func (t *Transport) roundTrip(req *Request) (*Response, error) {
 	}
 	if req.Method != "" && !validMethod(req.Method) {
 		req.closeBody()
-		return nil, fmt.Errorf("github.com/AndrienkoAleksandr/net-1/http: invalid method %q", req.Method)
+		return nil, fmt.Errorf("net/http: invalid method %q", req.Method)
 	}
 	if req.URL.Host == "" {
 		req.closeBody()
@@ -623,12 +612,6 @@ func (t *Transport) roundTrip(req *Request) (*Response, error) {
 			if e, ok := err.(transportReadFromServerError); ok {
 				err = e.err
 			}
-			if b, ok := req.Body.(*readTrackingBody); ok && !b.didClose {
-				// Issue 49621: Close the request body if pconn.roundTrip
-				// didn't do so already. This can happen if the pconn
-				// write loop exits without reading the write request.
-				req.closeBody()
-			}
 			return nil, err
 		}
 		testHookRoundTripRetried()
@@ -641,7 +624,7 @@ func (t *Transport) roundTrip(req *Request) (*Response, error) {
 	}
 }
 
-var errCannotRewind = errors.New("github.com/AndrienkoAleksandr/net-1/http: cannot rewind body after connection loss")
+var errCannotRewind = errors.New("net/http: cannot rewind body after connection loss")
 
 type readTrackingBody struct {
 	io.ReadCloser
@@ -746,7 +729,7 @@ func (pc *persistConn) shouldRetryRequest(req *Request, err error) bool {
 }
 
 // ErrSkipAltProtocol is a sentinel error value defined by Transport.RegisterProtocol.
-var ErrSkipAltProtocol = errors.New("github.com/AndrienkoAleksandr/net-1/http: skip alternate protocol")
+var ErrSkipAltProtocol = errors.New("net/http: skip alternate protocol")
 
 // RegisterProtocol registers a new protocol with scheme.
 // The Transport will pass requests using the given scheme to rt.
@@ -826,12 +809,14 @@ func (t *Transport) cancelRequest(key cancelKey, err error) bool {
 //
 
 var (
+	// proxyConfigOnce guards proxyConfig
 	envProxyOnce      sync.Once
 	envProxyFuncValue func(*url.URL) (*url.URL, error)
 )
 
-// envProxyFunc returns a function that reads the
-// environment variable to determine the proxy address.
+// defaultProxyConfig returns a ProxyConfig value looked up
+// from the environment. This mitigates expensive lookups
+// on some platforms (e.g. Windows).
 func envProxyFunc() func(*url.URL) (*url.URL, error) {
 	envProxyOnce.Do(func() {
 		envProxyFuncValue = httpproxy.FromEnvironment().ProxyFunc()
@@ -902,7 +887,7 @@ type transportReadFromServerError struct {
 func (e transportReadFromServerError) Unwrap() error { return e.err }
 
 func (e transportReadFromServerError) Error() string {
-	return fmt.Sprintf("github.com/AndrienkoAleksandr/net-1/http: Transport failed to read from server: %v", e.err)
+	return fmt.Sprintf("net/http: Transport failed to read from server: %v", e.err)
 }
 
 func (t *Transport) putOrCloseIdleConn(pconn *persistConn) {
@@ -1181,16 +1166,12 @@ var zeroDialer net.Dialer
 
 func (t *Transport) dial(ctx context.Context, network, addr string) (net.Conn, error) {
 	if t.DialContext != nil {
-		c, err := t.DialContext(ctx, network, addr)
-		if c == nil && err == nil {
-			err = errors.New("github.com/AndrienkoAleksandr/net-1/http: Transport.DialContext hook returned (nil, nil)")
-		}
-		return c, err
+		return t.DialContext(ctx, network, addr)
 	}
 	if t.Dial != nil {
 		c, err := t.Dial(network, addr)
 		if c == nil && err == nil {
-			err = errors.New("github.com/AndrienkoAleksandr/net-1/http: Transport.Dial hook returned (nil, nil)")
+			err = errors.New("net/http: Transport.Dial hook returned (nil, nil)")
 		}
 		return c, err
 	}
@@ -1242,7 +1223,7 @@ func (w *wantConn) tryDeliver(pc *persistConn, err error) bool {
 	w.pc = pc
 	w.err = err
 	if w.pc == nil && w.err == nil {
-		panic("github.com/AndrienkoAleksandr/net-1/http: internal error: misuse of tryDeliver")
+		panic("net/http: internal error: misuse of tryDeliver")
 	}
 	close(w.ready)
 	return true
@@ -1338,7 +1319,7 @@ func (t *Transport) customDialTLS(ctx context.Context, network, addr string) (co
 		conn, err = t.DialTLS(network, addr)
 	}
 	if conn == nil && err == nil {
-		err = errors.New("github.com/AndrienkoAleksandr/net-1/http: Transport.DialTLS or DialTLSContext returned (nil, nil)")
+		err = errors.New("net/http: Transport.DialTLS or DialTLSContext returned (nil, nil)")
 	}
 	return
 }
@@ -1491,7 +1472,7 @@ func (t *Transport) decConnsPerHost(key connectMethodKey) {
 	if n == 0 {
 		// Shouldn't happen, but if it does, the counting is buggy and could
 		// easily lead to a silent deadlock, so report the problem loudly.
-		panic("github.com/AndrienkoAleksandr/net-1/http: internal error: connCount underflow")
+		panic("net/http: internal error: connCount underflow")
 	}
 
 	// Can we hand this count to a goroutine still waiting to dial?
@@ -1736,14 +1717,6 @@ func (t *Transport) dialConn(ctx context.Context, cm connectMethod) (pconn *pers
 			conn.Close()
 			return nil, err
 		}
-
-		if t.OnProxyConnectResponse != nil {
-			err = t.OnProxyConnectResponse(ctx, cm.proxyURL, connectReq, resp)
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		if resp.StatusCode != 200 {
 			_, text, ok := strings.Cut(resp.Status, " ")
 			conn.Close()
@@ -1822,6 +1795,7 @@ var _ io.ReaderFrom = (*persistConnWriter)(nil)
 //	socks5://proxy.com|https|foo.com  socks5 to proxy, then https to foo.com
 //	https://proxy.com|https|foo.com   https to proxy, then CONNECT to foo.com
 //	https://proxy.com|http            https to proxy, http to anywhere after that
+//
 type connectMethod struct {
 	_            incomparable
 	proxyURL     *url.URL // nil for no proxy, else full proxy URL
@@ -2071,7 +2045,7 @@ func (pc *persistConn) mapRoundTripError(req *transportRequest, startBytesWritte
 		if pc.nwrite == startBytesWritten {
 			return nothingWrittenError{err}
 		}
-		return fmt.Errorf("github.com/AndrienkoAleksandr/net-1/http: HTTP/1.x transport connection broken: %w", err)
+		return fmt.Errorf("net/http: HTTP/1.x transport connection broken: %v", err)
 	}
 	return err
 }
@@ -2139,7 +2113,7 @@ func (pc *persistConn) readLoop() {
 
 		if err != nil {
 			if pc.readLimit <= 0 {
-				err = fmt.Errorf("github.com/AndrienkoAleksandr/net-1/http: server response headers exceeded %d bytes; aborted", pc.maxHeaderResponseSize())
+				err = fmt.Errorf("net/http: server response headers exceeded %d bytes; aborted", pc.maxHeaderResponseSize())
 			}
 
 			select {
@@ -2278,7 +2252,7 @@ func (pc *persistConn) readLoopPeekFailLocked(peekErr error) {
 		// common case.
 		pc.closeLocked(errServerClosedIdle)
 	} else {
-		pc.closeLocked(fmt.Errorf("readLoopPeekFailLocked: %w", peekErr))
+		pc.closeLocked(fmt.Errorf("readLoopPeekFailLocked: %v", peekErr))
 	}
 }
 
@@ -2332,7 +2306,7 @@ func (pc *persistConn) readResponse(rc requestAndChan, trace *httptrace.ClientTr
 		if is1xxNonTerminal {
 			num1xx++
 			if num1xx > max1xxResponses {
-				return nil, errors.New("github.com/AndrienkoAleksandr/net-1/http: too many 1xx informational responses")
+				return nil, errors.New("net/http: too many 1xx informational responses")
 			}
 			pc.readLimit = pc.maxHeaderResponseSize() // reset the limit
 			if trace != nil && trace.Got1xxResponse != nil {
@@ -2412,10 +2386,6 @@ type nothingWrittenError struct {
 	error
 }
 
-func (nwe nothingWrittenError) Unwrap() error {
-	return nwe.error
-}
-
 func (pc *persistConn) writeLoop() {
 	defer close(pc.writeLoopDone)
 	for {
@@ -2457,10 +2427,7 @@ func (pc *persistConn) writeLoop() {
 // maxWriteWaitBeforeConnReuse is how long the a Transport RoundTrip
 // will wait to see the Request's Body.Write result after getting a
 // response from the server. See comments in (*persistConn).wroteRequest.
-//
-// In tests, we set this to a large value to avoid flakiness from inconsistent
-// recycling of connections.
-var maxWriteWaitBeforeConnReuse = 50 * time.Millisecond
+const maxWriteWaitBeforeConnReuse = 50 * time.Millisecond
 
 // wroteRequest is a check before recycling a connection that the previous write
 // (from writeLoop above) happened and was successful.
@@ -2543,12 +2510,12 @@ func (e *httpError) Error() string   { return e.err }
 func (e *httpError) Timeout() bool   { return e.timeout }
 func (e *httpError) Temporary() bool { return true }
 
-var errTimeout error = &httpError{err: "github.com/AndrienkoAleksandr/net-1/http: timeout awaiting response headers", timeout: true}
+var errTimeout error = &httpError{err: "net/http: timeout awaiting response headers", timeout: true}
 
 // errRequestCanceled is set to be identical to the one from h2 to facilitate
 // testing.
 var errRequestCanceled = http2errRequestCanceled
-var errRequestCanceledConn = errors.New("github.com/AndrienkoAleksandr/net-1/http: request canceled while waiting for connection") // TODO: unify?
+var errRequestCanceledConn = errors.New("net/http: request canceled while waiting for connection") // TODO: unify?
 
 func nop() {}
 
@@ -2656,7 +2623,7 @@ func (pc *persistConn) roundTrip(req *transportRequest) (resp *Response, err err
 				req.logf("writeErrCh resv: %T/%#v", err, err)
 			}
 			if err != nil {
-				pc.close(fmt.Errorf("write error: %w", err))
+				pc.close(fmt.Errorf("write error: %v", err))
 				return nil, pc.mapRoundTripError(req, startBytesWritten, err)
 			}
 			if d := pc.t.ResponseHeaderTimeout; d > 0 {
@@ -2758,21 +2725,17 @@ var portMap = map[string]string{
 	"socks5": "1080",
 }
 
-func idnaASCIIFromURL(url *url.URL) string {
+// canonicalAddr returns url.Host but always with a ":port" suffix
+func canonicalAddr(url *url.URL) string {
 	addr := url.Hostname()
 	if v, err := idnaASCII(addr); err == nil {
 		addr = v
 	}
-	return addr
-}
-
-// canonicalAddr returns url.Host but always with a ":port" suffix.
-func canonicalAddr(url *url.URL) string {
 	port := url.Port()
 	if port == "" {
 		port = portMap[url.Scheme]
 	}
-	return net.JoinHostPort(idnaASCIIFromURL(url), port)
+	return net.JoinHostPort(addr, port)
 }
 
 // bodyEOFSignal is used by the HTTP/1 transport when reading response
@@ -2883,9 +2846,7 @@ type tlsHandshakeTimeoutError struct{}
 
 func (tlsHandshakeTimeoutError) Timeout() bool   { return true }
 func (tlsHandshakeTimeoutError) Temporary() bool { return true }
-func (tlsHandshakeTimeoutError) Error() string {
-	return "github.com/AndrienkoAleksandr/net-1/http: TLS handshake timeout"
-}
+func (tlsHandshakeTimeoutError) Error() string   { return "net/http: TLS handshake timeout" }
 
 // fakeLocker is a sync.Locker which does nothing. It's used to guard
 // test-only fields when not under test, to avoid runtime atomic

@@ -5,12 +5,12 @@
 // This file implements sysSocket for platforms that do not provide a fast path
 // for setting SetNonblock and CloseOnExec.
 
-//go:build aix || darwin
+//go:build aix || darwin || (solaris && !illumos)
 
 package net
 
 import (
-	"internal/poll"
+	"github.com/AndrienkoAleksandr/net-1/internal/poll"
 	"os"
 	"syscall"
 )

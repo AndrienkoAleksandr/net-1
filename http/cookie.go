@@ -9,12 +9,11 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"github.com/AndrienkoAleksandr/net-1/http/internal/ascii"
 	"net/textproto"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/AndrienkoAleksandr/net-1/http/internal/ascii"
 )
 
 // A Cookie represents an HTTP cookie as sent in the Set-Cookie header of an
@@ -74,7 +73,6 @@ func readSetCookies(h Header) []*Cookie {
 		if !ok {
 			continue
 		}
-		name = textproto.TrimString(name)
 		if !isCookieNameValid(name) {
 			continue
 		}
@@ -207,7 +205,7 @@ func (c *Cookie) String() string {
 			b.WriteString("; Domain=")
 			b.WriteString(d)
 		} else {
-			log.Printf("github.com/AndrienkoAleksandr/net-1/http: invalid Cookie.Domain %q; dropping domain attribute", c.Domain)
+			log.Printf("net/http: invalid Cookie.Domain %q; dropping domain attribute", c.Domain)
 		}
 	}
 	var buf [len(TimeFormat)]byte
@@ -248,7 +246,7 @@ func (c *Cookie) Valid() error {
 	if !isCookieNameValid(c.Name) {
 		return errors.New("http: invalid Cookie.Name")
 	}
-	if !c.Expires.IsZero() && !validCookieExpires(c.Expires) {
+	if !validCookieExpires(c.Expires) {
 		return errors.New("http: invalid Cookie.Expires")
 	}
 	for i := 0; i < len(c.Value); i++ {
@@ -274,7 +272,7 @@ func (c *Cookie) Valid() error {
 // readCookies parses all "Cookie" values from the header h and
 // returns the successfully parsed Cookies.
 //
-// if filter isn't empty, only cookies of that name are returned.
+// if filter isn't empty, only cookies of that name are returned
 func readCookies(h Header, filter string) []*Cookie {
 	lines := h["Cookie"]
 	if len(lines) == 0 {
@@ -293,7 +291,6 @@ func readCookies(h Header, filter string) []*Cookie {
 				continue
 			}
 			name, val, _ := strings.Cut(part, "=")
-			name = textproto.TrimString(name)
 			if !isCookieNameValid(name) {
 				continue
 			}
@@ -390,13 +387,11 @@ func sanitizeCookieName(n string) string {
 
 // sanitizeCookieValue produces a suitable cookie-value from v.
 // https://tools.ietf.org/html/rfc6265#section-4.1.1
-//
-//	cookie-value      = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
-//	cookie-octet      = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
-//	          ; US-ASCII characters excluding CTLs,
-//	          ; whitespace DQUOTE, comma, semicolon,
-//	          ; and backslash
-//
+// cookie-value      = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
+// cookie-octet      = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+//           ; US-ASCII characters excluding CTLs,
+//           ; whitespace DQUOTE, comma, semicolon,
+//           ; and backslash
 // We loosen this as spaces and commas are common in cookie values
 // but we produce a quoted cookie-value if and only if v contains
 // commas or spaces.
@@ -432,7 +427,7 @@ func sanitizeOrWarn(fieldName string, valid func(byte) bool, v string) string {
 		if valid(v[i]) {
 			continue
 		}
-		log.Printf("github.com/AndrienkoAleksandr/net-1/http: invalid byte %q in %s; dropping invalid bytes", v[i], fieldName)
+		log.Printf("net/http: invalid byte %q in %s; dropping invalid bytes", v[i], fieldName)
 		ok = false
 		break
 	}

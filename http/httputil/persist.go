@@ -9,10 +9,9 @@ import (
 	"errors"
 	"io"
 	"net"
+	"github.com/AndrienkoAleksandr/net-1/http"
 	"net/textproto"
 	"sync"
-
-	"github.com/AndrienkoAleksandr/net-1/http"
 )
 
 var (

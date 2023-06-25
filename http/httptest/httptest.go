@@ -10,9 +10,8 @@ import (
 	"bytes"
 	"crypto/tls"
 	"io"
-	"strings"
-
 	"github.com/AndrienkoAleksandr/net-1/http"
+	"strings"
 )
 
 // NewRequest returns a new incoming server Request, suitable

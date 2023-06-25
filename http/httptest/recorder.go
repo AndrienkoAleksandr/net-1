@@ -8,11 +8,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"github.com/AndrienkoAleksandr/net-1/http"
 	"net/textproto"
 	"strconv"
 	"strings"
-
-	"github.com/AndrienkoAleksandr/net-1/http"
 
 	"golang.org/x/net/http/httpguts"
 )
@@ -208,20 +207,18 @@ func (rw *ResponseRecorder) Result() *http.Response {
 	if trailers, ok := rw.snapHeader["Trailer"]; ok {
 		res.Trailer = make(http.Header, len(trailers))
 		for _, k := range trailers {
-			for _, k := range strings.Split(k, ",") {
-				k = http.CanonicalHeaderKey(textproto.TrimString(k))
-				if !httpguts.ValidTrailerHeader(k) {
-					// Ignore since forbidden by RFC 7230, section 4.1.2.
-					continue
-				}
-				vv, ok := rw.HeaderMap[k]
-				if !ok {
-					continue
-				}
-				vv2 := make([]string, len(vv))
-				copy(vv2, vv)
-				res.Trailer[k] = vv2
+			k = http.CanonicalHeaderKey(k)
+			if !httpguts.ValidTrailerHeader(k) {
+				// Ignore since forbidden by RFC 7230, section 4.1.2.
+				continue
 			}
+			vv, ok := rw.HeaderMap[k]
+			if !ok {
+				continue
+			}
+			vv2 := make([]string, len(vv))
+			copy(vv2, vv)
+			res.Trailer[k] = vv2
 		}
 	}
 	for k, vv := range rw.HeaderMap {

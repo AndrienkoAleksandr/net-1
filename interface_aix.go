@@ -5,8 +5,8 @@
 package net
 
 import (
-	"internal/poll"
-	"internal/syscall/unix"
+	"github.com/AndrienkoAleksandr/net-1/internal/poll"
+	"github.com/AndrienkoAleksandr/net-1/internal/syscall/unix"
 	"syscall"
 	"unsafe"
 )
@@ -100,9 +100,6 @@ func linkFlags(rawFlags int32) Flags {
 	var f Flags
 	if rawFlags&syscall.IFF_UP != 0 {
 		f |= FlagUp
-	}
-	if rawFlags&syscall.IFF_RUNNING != 0 {
-		f |= FlagRunning
 	}
 	if rawFlags&syscall.IFF_BROADCAST != 0 {
 		f |= FlagBroadcast
