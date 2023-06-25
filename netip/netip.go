@@ -18,7 +18,7 @@ import (
 	"strconv"
 
 	"github.com/AndrienkoAleksandr/net-1/internal/bytealg"
-	"github.com/AndrienkoAleksandr/net-1/intern"
+	"github.com/AndrienkoAleksandr/net-1/internal/intern"
 	"github.com/AndrienkoAleksandr/net-1/internal/itoa"
 )
 
