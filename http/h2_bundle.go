@@ -4561,8 +4561,8 @@ func (sc *http2serverConn) serve() {
 		sc.sendWindowUpdate(nil, int(diff))
 	}
 
-	if err := sc.readPreface(); err != nil {
-		sc.condlogf(err, "http2: server: error reading preface from client %v: %v", sc.conn.RemoteAddr(), err)
+	if err := sc.readPreface(); err != nil {//
+		sc.condlogf(err, "http2: server$$$: error reading preface from client %v: %v", sc.conn.RemoteAddr(), err)
 		return
 	}
 	// Now that we've got the preface, get us out of the
